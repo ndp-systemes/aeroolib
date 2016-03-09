@@ -1097,9 +1097,13 @@ class OOSerializer:
                     tag.attrib['{%s}value' % namespaces['office']] = tag[0].text
                 except (ValueError,TypeError):
                     pattern = re.compile("^([0-9]{4}-[0-9]{2}-[0-9]{2})$")
-                    if pattern.match(tag[0].text):
+                    try:
+                        is_date = pattern.match(tag[0].text)
+                    except TypeError:
+                        is_date = None
+                    if is_date:
                         guess_type = 'date'
-                        tag.attrib['{%s}value' % namespaces['office']] = tag[0].text
+                        tag.attrib['{%s}date-value' % namespaces['office']] = tag[0].text
                     else:
                         guess_type = 'string'
             tag.attrib['{%s}value-type' % namespaces['office']] = guess_type
