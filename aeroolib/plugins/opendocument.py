@@ -1107,7 +1107,8 @@ class OOSerializer:
                     else:
                         guess_type = 'string'
             tag.attrib['{%s}value-type' % namespaces['office']] = guess_type
-            tag.attrib['{%s}value-type' % namespaces['calcext']] = guess_type
+            if namespaces.get('calcext'):
+                tag.attrib['{%s}value-type' % namespaces['calcext']] = guess_type
             del tag.attrib['guess_type']
 
     def check_images(self, tree, namespaces):
