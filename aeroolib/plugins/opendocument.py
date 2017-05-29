@@ -4,7 +4,7 @@
 # Reserved.
 #                    General contacts <info@alistek.com>
 #
-# DISCLAIMER: This module is licensed under GPLv3 or newer and 
+# DISCLAIMER: This module is licensed under GPLv3 or newer and
 # is considered incompatible with OpenERP SA "AGPL + Private Use License"!
 #
 # Copyright (c) 2009 Cedric Krier.
@@ -1086,30 +1086,44 @@ class OOSerializer:
                     pass
 
     def check_guess_type(self, tree, namespaces):
+        def find_style_type_in_tree(tree, style_name):
+            tag_list = tree.xpath("//*[@style:name='%s']" % style_name, namespaces=namespaces)
+            if tag_list:
+                res = lxml.etree.QName(tag_list[0].tag).localname.replace("-style", "")
+            else:
+                res = False
+            return res
+
         tags = tree.xpath('//table:table-cell[@guess_type]', namespaces=namespaces)
         for tag in tags:
-            if len(tag)==0 or len(tag)>1 or tag[0].getchildren():
-                guess_type = 'string'
-            else:
-                try:
-                    float(tag[0].text)
-                    guess_type = 'float'
-                    tag.attrib['{%s}value' % namespaces['office']] = tag[0].text
-                except (ValueError,TypeError):
-                    pattern = re.compile("^([0-9]{4}-[0-9]{2}-[0-9]{2})$")
-                    try:
-                        is_date = pattern.match(tag[0].text)
-                    except TypeError:
-                        is_date = None
-                    if is_date:
-                        guess_type = 'date'
-                        tag.attrib['{%s}date-value' % namespaces['office']] = tag[0].text
-                    else:
-                        guess_type = 'string'
+            guess_type = "string"
+            del tag.attrib['guess_type']
+            if not tag[0].text:
+                continue
+
+            style_tag_list = tree.xpath(
+                "//style:style[@style:name='%s']" % tag.attrib['{%s}style-name' % namespaces['table']],
+                namespaces=namespaces
+            )
+            if style_tag_list:
+                data_style_name = style_tag_list[0].attrib['{%s}data-style-name' % namespaces['style']]
+                guess_type = find_style_type_in_tree(tree, data_style_name)
+                if not guess_type:
+                    style_tree = lxml.etree.XML(self.styles_xml)
+                    guess_type = find_style_type_in_tree(style_tree, data_style_name)
+                if guess_type == "text":
+                    guess_type = "string"
+                elif guess_type == "number":
+                    guess_type = "float"
+
             tag.attrib['{%s}value-type' % namespaces['office']] = guess_type
             if namespaces.get('calcext'):
                 tag.attrib['{%s}value-type' % namespaces['calcext']] = guess_type
-            del tag.attrib['guess_type']
+
+            if guess_type in ["float", "currency"]:
+                tag.attrib['{%s}value' % namespaces['office']] = tag[0].text
+            elif guess_type == "date":
+                tag.attrib['{%s}date-value' % namespaces['office']] = tag[0].text
 
     def check_images(self, tree, namespaces):
         tags = tree.xpath('//draw:frame/draw:image[@svg:height and @svg:width]', namespaces=namespaces)
