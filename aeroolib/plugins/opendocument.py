@@ -1106,15 +1106,16 @@ class OOSerializer:
                 namespaces=namespaces
             )
             if style_tag_list:
-                data_style_name = style_tag_list[0].attrib['{%s}data-style-name' % namespaces['style']]
-                guess_type = find_style_type_in_tree(tree, data_style_name)
-                if not guess_type:
-                    style_tree = lxml.etree.XML(self.styles_xml)
-                    guess_type = find_style_type_in_tree(style_tree, data_style_name)
-                if guess_type == "text":
-                    guess_type = "string"
-                elif guess_type == "number":
-                    guess_type = "float"
+                data_style_name = style_tag_list[0].attrib.get('{%s}data-style-name' % namespaces['style'])
+                if data_style_name:
+                    guess_type = find_style_type_in_tree(tree, data_style_name)
+                    if not guess_type:
+                        style_tree = lxml.etree.XML(self.styles_xml)
+                        guess_type = find_style_type_in_tree(style_tree, data_style_name)
+                    if guess_type == "text":
+                        guess_type = "string"
+                    elif guess_type == "number":
+                        guess_type = "float"
 
             tag.attrib['{%s}value-type' % namespaces['office']] = guess_type
             if namespaces.get('calcext'):
