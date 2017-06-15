@@ -870,7 +870,8 @@ class OOSerializer:
 
         self.new_oo = None
         self.xml_serializer = genshi.output.XMLSerializer()
-
+        self.styles_types = {}
+        self.data_types = {}
 
 
     def check_tabs(self, tree, namespaces):
@@ -1087,12 +1088,13 @@ class OOSerializer:
 
     def check_guess_type(self, tree, namespaces):
         def find_style_type_in_tree(tree, style_name):
-            tag_list = tree.xpath("//*[@style:name='%s']" % style_name, namespaces=namespaces)
-            if tag_list:
-                res = lxml.etree.QName(tag_list[0].tag).localname.replace("-style", "")
-            else:
-                res = False
-            return res
+            if style_name not in self.data_types:
+                tag_list = tree.xpath("//*[@style:name='%s']" % style_name, namespaces=namespaces)
+                if tag_list:
+                    self.data_types[style_name] = lxml.etree.QName(tag_list[0].tag).localname.replace("-style", "")
+                else:
+                    return False
+            return self.data_types[style_name]
 
         tags = tree.xpath('//table:table-cell[@guess_type]', namespaces=namespaces)
         for tag in tags:
@@ -1101,21 +1103,25 @@ class OOSerializer:
             if not tag[0].text:
                 continue
 
-            style_tag_list = tree.xpath(
-                "//style:style[@style:name='%s']" % tag.attrib['{%s}style-name' % namespaces['table']],
-                namespaces=namespaces
-            )
-            if style_tag_list:
-                data_style_name = style_tag_list[0].attrib.get('{%s}data-style-name' % namespaces['style'])
-                if data_style_name:
-                    guess_type = find_style_type_in_tree(tree, data_style_name)
-                    if not guess_type:
-                        style_tree = lxml.etree.XML(self.styles_xml)
-                        guess_type = find_style_type_in_tree(style_tree, data_style_name)
-                    if guess_type == "text":
-                        guess_type = "string"
-                    elif guess_type == "number":
-                        guess_type = "float"
+            style_name = tag.attrib['{%s}style-name' % namespaces['table']]
+            if style_name not in self.styles_types:
+                style_tag_list = tree.xpath(
+                    "//style:style[@style:name='%s']" % style_name, namespaces=namespaces
+                )
+                if style_tag_list:
+                    self.styles_types[style_name] = style_tag_list[0].attrib.get('{%s}data-style-name' % namespaces['style'])
+                else:
+                    self.styles_types[style_name] = False
+            data_style_name = self.styles_types.get(style_name)
+            if data_style_name:
+                guess_type = find_style_type_in_tree(tree, data_style_name)
+                if not guess_type:
+                    style_tree = lxml.etree.XML(self.styles_xml)
+                    guess_type = find_style_type_in_tree(style_tree, data_style_name)
+                if guess_type == "text":
+                    guess_type = "string"
+                elif guess_type == "number":
+                    guess_type = "float"
 
             tag.attrib['{%s}value-type' % namespaces['office']] = guess_type
             if namespaces.get('calcext'):
