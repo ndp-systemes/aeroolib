@@ -1103,7 +1103,9 @@ class OOSerializer:
             if not tag[0].text:
                 continue
 
-            style_name = tag.attrib['{%s}style-name' % namespaces['table']]
+            style_name = tag.attrib.get('{%s}style-name' % namespaces['table'])
+            if not style_name:
+                style_name = tag.getparent().attrib['{%s}style-name' % namespaces['table']]
             if style_name not in self.styles_types:
                 style_tag_list = tree.xpath(
                     "//style:style[@style:name='%s']" % style_name, namespaces=namespaces
