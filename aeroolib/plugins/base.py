@@ -35,7 +35,7 @@
 
 __metaclass__ = type
 
-from cStringIO import OutputType
+from io import IOBase
 
 import genshi.core
 from genshi.template import NewTextTemplate, MarkupTemplate
@@ -60,7 +60,7 @@ class AerooStream(genshi.core.Stream):
 
     def __str__(self):
         val = self.render()
-        if isinstance(val, OutputType):
+        if isinstance(val, IOBase):
             return val.getvalue()
         else:
             return val
